@@ -249,7 +249,7 @@ func parseV2RayTransport(opts model.V2RTransportOpts) *option.V2RayTransportOpti
 		return &option.V2RayTransportOptions{
 			Type: constant.V2RayTransportTypeGRPC,
 			GRPCOptions: option.V2RayGRPCOptions{
-				ServiceName: opts.Host,
+				ServiceName: opts.ServiceName,
 			},
 		}
 	case "quic":
