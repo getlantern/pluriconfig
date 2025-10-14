@@ -29,14 +29,9 @@ func (p parser) Name() string {
 	return string(model.ProviderSingBox)
 }
 
-type Options struct {
-	Outbounds []option.Outbound `json:"outbounds,omitempty"`
-	Endpoints []option.Endpoint `json:"endpoints,omitempty"`
-}
-
 // Parse parses the given data into a Config object.
 func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error) {
-	var config Options
+	var config model.SingBoxOptions
 	if err := json.UnmarshalContext(ctx, data, &config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal sing-box config: %w", err)
 	}
@@ -49,15 +44,15 @@ func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error
 
 // Serialize serializes the given Config object into a sing-box json format.
 func (p parser) Serialize(ctx context.Context, config *model.AnyConfig) ([]byte, error) {
-	var opts Options
+	var opts model.SingBoxOptions
 	var ok bool
 	switch config.Type {
 	case model.ProviderSingBox:
-		if opts, ok = config.Options.(Options); !ok {
+		if opts, ok = config.Options.(model.SingBoxOptions); !ok {
 			return nil, fmt.Errorf("invalid options type: %T", config.Options)
 		}
 	case model.ProviderURL:
-		opts = Options{}
+		opts = model.SingBoxOptions{}
 		url, ok := config.Options.(url.URL)
 		if !ok {
 			return nil, fmt.Errorf("invalid options type: %T", config.Options)

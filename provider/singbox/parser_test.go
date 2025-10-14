@@ -35,8 +35,8 @@ func TestParser_Parse(t *testing.T) {
 	require.NoError(t, err, "Parse() error")
 
 	assert.Equal(t, model.ProviderSingBox, cfg.Type)
-	assert.Len(t, cfg.Options.(Options).Outbounds, 1)
-	assert.Equal(t, "shadowsocks", cfg.Options.(Options).Outbounds[0].Type)
+	assert.Len(t, cfg.Options.(model.SingBoxOptions).Outbounds, 1)
+	assert.Equal(t, "shadowsocks", cfg.Options.(model.SingBoxOptions).Outbounds[0].Type)
 }
 
 func TestParser_Serialize(t *testing.T) {
@@ -81,7 +81,7 @@ func TestParser_Serialize(t *testing.T) {
 				ctx: ctx,
 				cfg: &model.AnyConfig{
 					Type: model.ProviderSingBox,
-					Options: Options{
+					Options: model.SingBoxOptions{
 						Outbounds: []option.Outbound{
 							{
 								Type: "shadowsocks",

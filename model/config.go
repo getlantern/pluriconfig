@@ -1,6 +1,8 @@
 // Package model holds the data models used across the application.
 package model
 
+import "github.com/sagernet/sing-box/option"
+
 // Config is a generic configuration struct that holds a type identifier and options of any type.
 type Config[T any] struct {
 	Type    Provider
@@ -38,4 +40,9 @@ type VMESSConfig struct {
 	Security string `json:"scy"`
 	Sni      string `json:"sni"`
 	TLS      string `json:"tls"`
+}
+
+type SingBoxOptions struct {
+	Outbounds []option.Outbound `json:"outbounds,omitempty"`
+	Endpoints []option.Endpoint `json:"endpoints,omitempty"`
 }
