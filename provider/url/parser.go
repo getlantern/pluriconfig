@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/getlantern/pluriconfig"
 	"github.com/getlantern/pluriconfig/model"
@@ -27,38 +28,58 @@ func (p parser) Name() string {
 
 // Parse parses the given data into a Config object.
 func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error) {
-	parsedURL, err := url.Parse(string(data))
-	if err != nil {
-		return nil, fmt.Errorf("couldn't parse provided URL: %w", err)
+	urls := make([]*url.URL, 0)
+	stringURLs := strings.FieldsFunc(string(data), func(r rune) bool {
+		return r == '\n' || r == '\r' || r == ' ' || r == '\t' || r == ','
+	})
+	for _, su := range stringURLs {
+		if su == "" {
+			continue
+		}
+		parsedURL, err := url.Parse(su)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't parse provided URL: %w", err)
+		}
+		urls = append(urls, parsedURL)
 	}
 
 	return &model.AnyConfig{
 		Type:    model.ProviderURL,
-		Options: parsedURL,
+		Options: urls,
 	}, nil
 }
 
-// Serialize serializes the given Config object into a URL format
+// Serialize serializes the given Config object into a list of proxy URLs.
 func (p parser) Serialize(ctx context.Context, config *model.AnyConfig) ([]byte, error) {
 	switch config.Type {
 	case model.ProviderURL:
-		if url, ok := config.Options.(*url.URL); ok {
-			return url.MarshalBinary()
+		urls, ok := config.Options.([]url.URL)
+		if !ok {
+			return nil, fmt.Errorf("invalid options type: %T", config.Options)
 		}
-
-		return nil, fmt.Errorf("invalid options type: %T", config.Options)
+		var sb strings.Builder
+		for _, u := range urls {
+			sb.WriteString(u.String())
+			sb.WriteString("\n")
+		}
+		return []byte(sb.String()), nil
 	case model.ProviderSingBox:
 		opts, ok := config.Options.(model.SingBoxOptions)
 		if !ok {
 			return nil, fmt.Errorf("invalid options type: %T", config.Options)
 		}
 
-		url, err := singBoxOutboundToURL(opts.Outbounds[0])
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert sing-box config to URL: %w", err)
+		var sb strings.Builder
+		for _, outbound := range opts.Outbounds {
+			url, err := singBoxOutboundToURL(outbound)
+			if err != nil {
+				return nil, fmt.Errorf("failed to convert sing-box config to URL: %w", err)
+			}
+			sb.WriteString(url.String())
+			sb.WriteString("\n")
 		}
 
-		return url.MarshalBinary()
+		return []byte(sb.String()), nil
 	default:
 		return nil, fmt.Errorf("unsupported config type: %s", config.Type)
 	}
