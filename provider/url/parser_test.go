@@ -65,7 +65,7 @@ func TestParser_Parse(t *testing.T) {
 			}
 			require.NoError(t, err)
 			assert.Equal(t, model.ProviderURL, cfg.Type)
-			urls, ok := cfg.Options.([]*url.URL)
+			urls, ok := cfg.Options.([]url.URL)
 			require.True(t, ok)
 			require.Len(t, urls, len(tt.wantURLs))
 			for i, want := range tt.wantURLs {

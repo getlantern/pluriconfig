@@ -28,7 +28,7 @@ func (p parser) Name() string {
 
 // Parse parses the given data into a Config object.
 func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error) {
-	urls := make([]*url.URL, 0)
+	urls := make([]url.URL, 0)
 	stringURLs := strings.FieldsFunc(string(data), func(r rune) bool {
 		return r == '\n' || r == '\r' || r == ' ' || r == '\t' || r == ','
 	})
@@ -40,7 +40,7 @@ func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error
 		if err != nil {
 			return nil, fmt.Errorf("couldn't parse provided URL: %w", err)
 		}
-		urls = append(urls, parsedURL)
+		urls = append(urls, *parsedURL)
 	}
 
 	return &model.AnyConfig{
