@@ -123,9 +123,11 @@ func singBoxOutboundToURL(outbound option.Outbound) (*url.URL, error) {
 			u.Fragment = outbound.Tag
 		}
 		queryParams := u.Query()
-		queryParams.Add("sni", trojanOptions.TLS.ServerName)
-		queryParams.Add("alpn", trojanOptions.TLS.ALPN[0])
-		queryParams.Add("allowInsecure", fmt.Sprintf("%t", trojanOptions.TLS.Insecure))
+		if trojanOptions.TLS != nil {
+			queryParams.Add("sni", trojanOptions.TLS.ServerName)
+			queryParams.Add("alpn", trojanOptions.TLS.ALPN[0])
+			queryParams.Add("allowInsecure", fmt.Sprintf("%t", trojanOptions.TLS.Insecure))
+		}
 		v2rayConfToQueryParams(queryParams, buildV2RayConfigOpts(trojanOptions.Transport))
 		u.RawQuery = queryParams.Encode()
 		return u, nil
@@ -162,11 +164,11 @@ func singBoxOutboundToURL(outbound option.Outbound) (*url.URL, error) {
 			ID:       vmessOptions.UUID,
 			Security: vmessOptions.Security,
 			Aid:      vmessOptions.AlterId,
-			ALPN:     vmessOptions.TLS.ALPN[0],
-			Sni:      vmessOptions.TLS.ServerName,
 		}
 
-		if vmessOptions.TLS.Enabled {
+		if vmessOptions.TLS != nil {
+			cfg.ALPN = vmessOptions.TLS.ALPN[0]
+			cfg.Sni = vmessOptions.TLS.ServerName
 			cfg.TLS = "tls"
 		}
 
