@@ -181,7 +181,9 @@ func singBoxOutboundToURL(outbound option.Outbound) (*url.URL, error) {
 			cfg.Host = vmessOptions.Transport.GRPCOptions.ServiceName
 		case "http":
 			cfg.Net = "http"
-			cfg.Host = vmessOptions.Transport.HTTPOptions.Host[0]
+			if len(vmessOptions.Transport.HTTPOptions.Host) > 0 {
+				cfg.Host = vmessOptions.Transport.HTTPOptions.Host[0]
+			}
 			cfg.Path = vmessOptions.Transport.HTTPOptions.Path
 		case "httpupgrade":
 			cfg.Net = "httpupgrade"
@@ -218,7 +220,9 @@ func buildV2RayConfigOpts(opts *option.V2RayTransportOptions) model.V2RTransport
 		v2rayOpts.Host = opts.HTTPUpgradeOptions.Host
 	case "http":
 		v2rayOpts.Path = opts.HTTPOptions.Path
-		v2rayOpts.Host = opts.HTTPOptions.Host[0]
+		if len(opts.HTTPOptions.Host) > 0 {
+			v2rayOpts.Host = opts.HTTPOptions.Host[0]
+		}
 	}
 
 	return v2rayOpts
