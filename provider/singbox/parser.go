@@ -53,16 +53,18 @@ func (p parser) Serialize(ctx context.Context, config *model.AnyConfig) ([]byte,
 		}
 	case model.ProviderURL:
 		opts = model.SingBoxOptions{}
-		url, ok := config.Options.(url.URL)
+		urls, ok := config.Options.([]url.URL)
 		if !ok {
 			return nil, fmt.Errorf("invalid options type: %T", config.Options)
 		}
-		outbound, err := outboundFromURL(url)
-		if err != nil {
-			return nil, fmt.Errorf("failed to generate outbound from URL: %w", err)
-		}
+		for _, url := range urls {
+			outbound, err := outboundFromURL(url)
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate outbound from URL: %w", err)
+			}
 
-		opts.Outbounds = []option.Outbound{*outbound}
+			opts.Outbounds = []option.Outbound{*outbound}
+		}
 	default:
 		return nil, fmt.Errorf("unsupported provider: %s", config.Type)
 	}

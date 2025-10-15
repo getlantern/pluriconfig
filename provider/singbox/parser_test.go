@@ -124,7 +124,7 @@ func TestParser_Serialize(t *testing.T) {
 				ctx: ctx,
 				cfg: &model.AnyConfig{
 					Type:    model.ProviderURL,
-					Options: ssURL,
+					Options: []url.URL{ssURL},
 				},
 			},
 		},
