@@ -58,9 +58,11 @@ func (p parser) Serialize(ctx context.Context, config *model.AnyConfig) ([]byte,
 			return nil, fmt.Errorf("invalid options type: %T", config.Options)
 		}
 		var sb strings.Builder
-		for _, u := range urls {
+		for i, u := range urls {
 			sb.WriteString(u.String())
-			sb.WriteString("\n")
+			if i < len(urls)-1 {
+				sb.WriteString("\n")
+			}
 		}
 		return []byte(sb.String()), nil
 	case model.ProviderSingBox:
@@ -70,13 +72,15 @@ func (p parser) Serialize(ctx context.Context, config *model.AnyConfig) ([]byte,
 		}
 
 		var sb strings.Builder
-		for _, outbound := range opts.Outbounds {
+		for i, outbound := range opts.Outbounds {
 			url, err := singBoxOutboundToURL(outbound)
 			if err != nil {
 				return nil, fmt.Errorf("failed to convert sing-box config to URL: %w", err)
 			}
 			sb.WriteString(url.String())
-			sb.WriteString("\n")
+			if i < len(opts.Outbounds)-1 {
+				sb.WriteString("\n")
+			}
 		}
 
 		return []byte(sb.String()), nil
@@ -93,12 +97,12 @@ func singBoxOutboundToURL(outbound option.Outbound) (*url.URL, error) {
 			return nil, fmt.Errorf("invalid shadowsocks options type: %T", outbound.Options)
 		}
 		u := &url.URL{
-			Scheme: ssOptions.Method,
+			Scheme: "ss",
 			Host:   fmt.Sprintf("%s:%d", ssOptions.Server, ssOptions.ServerPort),
 		}
 		if ssOptions.Password != "" && ssOptions.Method != "none" {
 			u.User = url.User(base64.StdEncoding.EncodeToString([]byte(ssOptions.Method + ":" + ssOptions.Password)))
-		} else {
+		} else if ssOptions.Password != "" {
 			u.User = url.User(ssOptions.Password)
 		}
 		if outbound.Tag != "" {
@@ -189,7 +193,8 @@ func singBoxOutboundToURL(outbound option.Outbound) (*url.URL, error) {
 
 		u := &url.URL{
 			Scheme: "vmess",
-			Opaque: base64.StdEncoding.EncodeToString(encodedJSONConfig),
+			Host:   "",
+			Path:   base64.StdEncoding.EncodeToString(encodedJSONConfig),
 		}
 		return u, nil
 	default:
