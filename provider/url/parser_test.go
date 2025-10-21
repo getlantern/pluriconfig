@@ -249,3 +249,20 @@ func TestParser_Serialize(t *testing.T) {
 		})
 	}
 }
+
+func TestParseSerialize(t *testing.T) {
+	p := parser{}
+	ctx := context.Background()
+
+	originalInput := "http://example.com:8080\nhttps://another.com:443"
+	cfg, err := p.Parse(ctx, []byte(originalInput))
+	require.NoError(t, err)
+	urls, ok := cfg.Options.([]url.URL)
+	require.True(t, ok)
+	assert.Equal(t, urls[0], url.URL{Scheme: "http", Host: "example.com:8080"})
+	assert.Equal(t, urls[1], url.URL{Scheme: "https", Host: "another.com:443"})
+
+	serializedOutput, err := p.Serialize(ctx, cfg)
+	require.NoError(t, err)
+	assert.Equal(t, strings.TrimSpace(originalInput), strings.TrimSpace(string(serializedOutput)))
+}
