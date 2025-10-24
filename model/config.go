@@ -16,6 +16,7 @@ type Provider string
 const (
 	ProviderSingBox Provider = "singbox"
 	ProviderURL     Provider = "url"
+	ProviderClash   Provider = "clash"
 )
 
 // V2RTransportOpts holds options for V2Ray transport configuration.
