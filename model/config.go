@@ -26,6 +26,7 @@ type V2RTransportOpts struct {
 	Path        string
 	Method      string
 	ServiceName string
+	Headers     map[string][]string
 }
 
 // VMESSConfig holds the configuration for a VMESS protocol.
