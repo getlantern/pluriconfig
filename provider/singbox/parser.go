@@ -52,7 +52,7 @@ func (p parser) Serialize(ctx context.Context, config *model.AnyConfig) ([]byte,
 			return nil, fmt.Errorf("invalid options type: %T", config.Options)
 		}
 	case model.ProviderURL:
-		opts = model.SingBoxOptions{}
+		opts = model.SingBoxOptions{Outbounds: make([]option.Outbound, 0)}
 		urls, ok := config.Options.([]url.URL)
 		if !ok {
 			return nil, fmt.Errorf("invalid options type: %T", config.Options)
@@ -63,7 +63,21 @@ func (p parser) Serialize(ctx context.Context, config *model.AnyConfig) ([]byte,
 				return nil, fmt.Errorf("failed to generate outbound from URL: %w", err)
 			}
 
-			opts.Outbounds = []option.Outbound{*outbound}
+			opts.Outbounds = append(opts.Outbounds, *outbound)
+		}
+	case model.ProviderClash:
+		opts = model.SingBoxOptions{Outbounds: make([]option.Outbound, 0)}
+		clashConfig, ok := config.Options.([]model.Outbound)
+		if !ok {
+			return nil, fmt.Errorf("invalid options type: %T", config.Options)
+		}
+		for _, clashOutbound := range clashConfig {
+			outbound, err := outboundFromClash(clashOutbound)
+			if err != nil {
+				return nil, fmt.Errorf("failed to generate outbound from Clash config: %w", err)
+			}
+
+			opts.Outbounds = append(opts.Outbounds, *outbound)
 		}
 	default:
 		return nil, fmt.Errorf("unsupported provider: %s", config.Type)
@@ -253,10 +267,15 @@ func parseV2RayTransport(opts model.V2RTransportOpts) *option.V2RayTransportOpti
 			},
 		}
 	case "ws", "wss":
+		headers := make(badoption.HTTPHeader)
+		for key, values := range opts.Headers {
+			headers[key] = badoption.Listable[string](values)
+		}
 		return &option.V2RayTransportOptions{
 			Type: constant.V2RayTransportTypeWebsocket,
 			WebsocketOptions: option.V2RayWebsocketOptions{
-				Path: opts.Path,
+				Path:    opts.Path,
+				Headers: headers,
 			},
 		}
 	case "grpc":
@@ -273,5 +292,144 @@ func parseV2RayTransport(opts model.V2RTransportOpts) *option.V2RayTransportOpti
 		}
 	default:
 		return nil
+	}
+}
+
+func outboundFromClash(outbound model.Outbound) (*option.Outbound, error) {
+	switch outbound.Type {
+	case "shadowsocks":
+		ssOpts, ok := outbound.Options.(model.ShadowsocksOutboundOptions)
+		if !ok {
+			return nil, fmt.Errorf("invalid shadowsocks outbound options type: %T", outbound.Options)
+		}
+		port, err := strconv.ParseUint(ssOpts.Port, 10, 16)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't parse server port: %w", err)
+		}
+		return &option.Outbound{
+			Type: constant.TypeShadowsocks,
+			Tag:  outbound.Name,
+			Options: option.ShadowsocksOutboundOptions{
+				ServerOptions: option.ServerOptions{
+					Server:     ssOpts.Server,
+					ServerPort: uint16(port),
+				},
+				Method:   ssOpts.Cipher,
+				Password: ssOpts.Password,
+			},
+		}, nil
+	case "trojan":
+		trojanOpts, ok := outbound.Options.(model.TrojanOutboundOptions)
+		if !ok {
+			return nil, fmt.Errorf("invalid trojan outbound options type: %T", outbound.Options)
+		}
+		port, err := strconv.ParseUint(trojanOpts.Port, 10, 16)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't parse server port: %w", err)
+		}
+		var transport *option.V2RayTransportOptions
+		if trojanOpts.GRPCOpts != nil {
+			v2rTransportOpts := model.V2RTransportOpts{
+				Type:        "grpc",
+				ServiceName: trojanOpts.GRPCOpts.ServiceName,
+			}
+			transport = parseV2RayTransport(v2rTransportOpts)
+		}
+
+		if trojanOpts.WSOpts != nil {
+			v2rTransportOpts := model.V2RTransportOpts{
+				Type:    "ws",
+				Path:    trojanOpts.WSOpts.Path,
+				Headers: trojanOpts.WSOpts.Headers,
+			}
+			transport = parseV2RayTransport(v2rTransportOpts)
+		}
+
+		var outboundTLSOptionContainer option.OutboundTLSOptionsContainer
+		if trojanOpts.SNI != "" || trojanOpts.SkipCertVerify {
+			outboundTLSOptionContainer = option.OutboundTLSOptionsContainer{
+				TLS: &option.OutboundTLSOptions{
+					Enabled:    true,
+					ServerName: trojanOpts.SNI,
+					Insecure:   trojanOpts.SkipCertVerify,
+					ALPN:       trojanOpts.ALPN,
+				},
+			}
+		}
+
+		return &option.Outbound{
+			Type: constant.TypeTrojan,
+			Tag:  outbound.Name,
+			Options: option.TrojanOutboundOptions{
+				Password: trojanOpts.Password,
+				ServerOptions: option.ServerOptions{
+					Server:     trojanOpts.Server,
+					ServerPort: uint16(port),
+				},
+				Transport:                   transport,
+				OutboundTLSOptionsContainer: outboundTLSOptionContainer,
+			},
+		}, nil
+	case "vmess":
+		vmessOpts, ok := outbound.Options.(model.VMESSOutboundOptions)
+		if !ok {
+			return nil, fmt.Errorf("invalid vmess outbound options type: %T", outbound.Options)
+		}
+		port, err := strconv.ParseUint(vmessOpts.Port, 10, 16)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't parse server port: %w", err)
+		}
+		var transport *option.V2RayTransportOptions
+		if vmessOpts.GRPCOpts != nil {
+			v2rTransportOpts := model.V2RTransportOpts{
+				Type:        "grpc",
+				ServiceName: vmessOpts.GRPCOpts.ServiceName,
+			}
+			transport = parseV2RayTransport(v2rTransportOpts)
+		}
+		if vmessOpts.WSOpts != nil {
+			v2rTransportOpts := model.V2RTransportOpts{
+				Type:    "ws",
+				Path:    vmessOpts.WSOpts.Path,
+				Headers: vmessOpts.WSOpts.Headers,
+			}
+			transport = parseV2RayTransport(v2rTransportOpts)
+		}
+		if vmessOpts.HTTPOpts != nil {
+			v2rTransportOpts := model.V2RTransportOpts{
+				Type:    "http",
+				Method:  vmessOpts.HTTPOpts.Method,
+				Path:    vmessOpts.HTTPOpts.Path[0],
+				Headers: vmessOpts.HTTPOpts.Headers,
+			}
+			transport = parseV2RayTransport(v2rTransportOpts)
+		}
+		var outboundTLSOptionContainer option.OutboundTLSOptionsContainer
+		if vmessOpts.ServerName != "" || vmessOpts.SkipCertVerify {
+			outboundTLSOptionContainer = option.OutboundTLSOptionsContainer{
+				TLS: &option.OutboundTLSOptions{
+					Enabled:    true,
+					ServerName: vmessOpts.ServerName,
+					Insecure:   vmessOpts.SkipCertVerify,
+				},
+			}
+		}
+		return &option.Outbound{
+			Type: constant.TypeVMess,
+			Tag:  outbound.Name,
+			Options: option.VMessOutboundOptions{
+				UUID:     vmessOpts.UUID,
+				AlterId:  vmessOpts.AlterID,
+				Security: vmessOpts.Cipher,
+				ServerOptions: option.ServerOptions{
+					Server:     vmessOpts.Server,
+					ServerPort: uint16(port),
+				},
+				Transport:                   transport,
+				OutboundTLSOptionsContainer: outboundTLSOptionContainer,
+			},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported outbound type: %s", outbound.Type)
 	}
 }

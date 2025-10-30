@@ -16,6 +16,7 @@ type Provider string
 const (
 	ProviderSingBox Provider = "singbox"
 	ProviderURL     Provider = "url"
+	ProviderClash   Provider = "clash"
 )
 
 // V2RTransportOpts holds options for V2Ray transport configuration.
@@ -25,6 +26,7 @@ type V2RTransportOpts struct {
 	Path        string
 	Method      string
 	ServiceName string
+	Headers     map[string][]string
 }
 
 // VMESSConfig holds the configuration for a VMESS protocol.
