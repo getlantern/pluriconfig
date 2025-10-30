@@ -202,8 +202,7 @@ func singBoxOutboundToURL(outbound option.Outbound) (*url.URL, error) {
 
 		u := &url.URL{
 			Scheme: "vmess",
-			Host:   "",
-			Path:   base64.StdEncoding.EncodeToString(encodedJSONConfig),
+			Host:   base64.StdEncoding.EncodeToString(encodedJSONConfig),
 		}
 		return u, nil
 	default:
