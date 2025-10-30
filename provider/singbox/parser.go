@@ -199,7 +199,7 @@ func outboundFromURL(providedURL url.URL) (*option.Outbound, error) {
 
 		var vmessConfig model.VMESSConfig
 		if err := json.Unmarshal(jsonEncoded, &vmessConfig); err != nil {
-			return nil, fmt.Errorf("couldn't parse vmess json: %w, %q", err, string(jsonEncoded))
+			return nil, fmt.Errorf("couldn't parse vmess json: %w", err)
 		}
 
 		v2rOpts := model.V2RTransportOpts{
