@@ -49,6 +49,19 @@ func TestParser_Serialize(t *testing.T) {
 		Host:     "127.0.0.1:8388",
 		Fragment: "ss-out",
 	}
+
+	ssOutbound := model.Outbound{
+		Name: "ss-out",
+		Type: "shadowsocks",
+		Options: model.ShadowsocksOutboundOptions{
+			ServerOptions: model.ServerOptions{
+				Server: "127.0.0.1",
+				Port:   "8388",
+			},
+			Cipher:   "chacha20-ietf-poly1305",
+			Password: "randompasswordwith24char",
+		},
+	}
 	type args struct {
 		ctx context.Context
 		cfg *model.AnyConfig
@@ -125,6 +138,20 @@ func TestParser_Serialize(t *testing.T) {
 				cfg: &model.AnyConfig{
 					Type:    model.ProviderURL,
 					Options: []url.URL{ssURL},
+				},
+			},
+		},
+		{
+			name: "should serialize a valid shadowsocks clash config successfully",
+			assert: func(t *testing.T, got []byte, err error) {
+				require.NoError(t, err)
+				assert.JSONEq(t, expectedSSConfig, string(got))
+			},
+			givenArgs: args{
+				ctx: ctx,
+				cfg: &model.AnyConfig{
+					Type:    model.ProviderClash,
+					Options: []model.Outbound{ssOutbound},
 				},
 			},
 		},
