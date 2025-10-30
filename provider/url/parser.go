@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/getlantern/pluriconfig"
@@ -162,10 +163,10 @@ func singBoxOutboundToURL(outbound option.Outbound) (*url.URL, error) {
 
 		cfg := model.VMESSConfig{
 			Addr:     vmessOptions.Server,
-			Port:     vmessOptions.ServerPort,
+			Port:     strconv.FormatUint(uint64(vmessOptions.ServerPort), 10),
 			ID:       vmessOptions.UUID,
 			Security: vmessOptions.Security,
-			Aid:      vmessOptions.AlterId,
+			Aid:      strconv.Itoa(vmessOptions.AlterId),
 		}
 
 		if vmessOptions.TLS != nil {

@@ -30,13 +30,14 @@ type V2RTransportOpts struct {
 // VMESSConfig holds the configuration for a VMESS protocol.
 type VMESSConfig struct {
 	Addr     string `json:"add"`
-	Port     uint16 `json:"port"`
-	Aid      int    `json:"aid"`
+	Port     string `json:"port"`
+	Aid      string `json:"aid"`
 	ALPN     string `json:"alpn"`
 	Host     string `json:"host"`
 	ID       string `json:"id"`
 	Net      string `json:"net"`
 	Path     string `json:"path"`
+	PS       string `json:"ps"`
 	Security string `json:"scy"`
 	Sni      string `json:"sni"`
 	TLS      string `json:"tls"`

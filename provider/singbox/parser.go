@@ -77,13 +77,12 @@ func (p parser) Serialize(ctx context.Context, config *model.AnyConfig) ([]byte,
 }
 
 func outboundFromURL(providedURL url.URL) (*option.Outbound, error) {
-	port, err := strconv.ParseUint(providedURL.Port(), 10, 16)
-	if err != nil {
-		return nil, fmt.Errorf("couldn't parse server port: %w", err)
-	}
-
 	switch providedURL.Scheme {
 	case "ss", "shadowsocks":
+		port, err := strconv.ParseUint(providedURL.Port(), 10, 16)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't parse server port: %w", err)
+		}
 		ssOptions := option.ShadowsocksOutboundOptions{
 			ServerOptions: option.ServerOptions{
 				Server:     providedURL.Hostname(),
@@ -110,6 +109,10 @@ func outboundFromURL(providedURL url.URL) (*option.Outbound, error) {
 			Options: ssOptions,
 		}, nil
 	case "trojan":
+		port, err := strconv.ParseUint(providedURL.Port(), 10, 16)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't parse server port: %w", err)
+		}
 		queryParams := providedURL.Query()
 		v2rTransportOpts := model.V2RTransportOpts{
 			Type:        queryParams.Get("type"),
@@ -149,6 +152,10 @@ func outboundFromURL(providedURL url.URL) (*option.Outbound, error) {
 			Options: trojanOptions,
 		}, nil
 	case "vless":
+		port, err := strconv.ParseUint(providedURL.Port(), 10, 16)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't parse server port: %w", err)
+		}
 		queryParams := providedURL.Query()
 		v2rTransportOpts := model.V2RTransportOpts{
 			Type:        queryParams.Get("type"),
@@ -171,14 +178,14 @@ func outboundFromURL(providedURL url.URL) (*option.Outbound, error) {
 			},
 		}, nil
 	case "vmess":
-		jsonEncoded, err := base64.StdEncoding.DecodeString(providedURL.Opaque)
+		jsonEncoded, err := base64.StdEncoding.DecodeString(providedURL.Host)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't parse decode vmess base64: %w", err)
 		}
 
 		var vmessConfig model.VMESSConfig
 		if err := json.Unmarshal(jsonEncoded, &vmessConfig); err != nil {
-			return nil, fmt.Errorf("couldn't parse vmess json: %w", err)
+			return nil, fmt.Errorf("couldn't parse vmess json: %w, %q", err, string(jsonEncoded))
 		}
 
 		v2rOpts := model.V2RTransportOpts{
@@ -188,13 +195,23 @@ func outboundFromURL(providedURL url.URL) (*option.Outbound, error) {
 			ServiceName: vmessConfig.Host,
 		}
 
+		aid, err := strconv.Atoi(vmessConfig.Aid)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't parse alter id from vmess config: %w", err)
+		}
+
+		port, err := strconv.ParseUint(vmessConfig.Port, 10, 16)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't parse port from vmess config: %w", err)
+		}
+
 		vmessOptions := option.VMessOutboundOptions{
 			UUID:     vmessConfig.ID,
 			Security: vmessConfig.Security,
-			AlterId:  vmessConfig.Aid,
+			AlterId:  aid,
 			ServerOptions: option.ServerOptions{
 				Server:     vmessConfig.Addr,
-				ServerPort: vmessConfig.Port,
+				ServerPort: uint16(port),
 			},
 			Transport: parseV2RayTransport(v2rOpts),
 		}
@@ -209,7 +226,7 @@ func outboundFromURL(providedURL url.URL) (*option.Outbound, error) {
 		}
 		return &option.Outbound{
 			Type:    constant.TypeVMess,
-			Tag:     providedURL.Fragment,
+			Tag:     vmessConfig.PS,
 			Options: vmessOptions,
 		}, nil
 	default:
