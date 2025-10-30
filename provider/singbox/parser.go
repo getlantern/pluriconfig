@@ -234,8 +234,10 @@ func outboundFromURL(providedURL url.URL) (*option.Outbound, error) {
 				TLS: &option.OutboundTLSOptions{
 					Enabled:    true,
 					ServerName: vmessConfig.Sni,
-					ALPN:       badoption.Listable[string]{vmessConfig.ALPN},
 				},
+			}
+			if vmessConfig.ALPN != "" {
+				vmessOptions.OutboundTLSOptionsContainer.TLS.ALPN = badoption.Listable[string]{vmessConfig.ALPN}
 			}
 		}
 		return &option.Outbound{
