@@ -244,7 +244,7 @@ func outboundFromURL(ctx context.Context, providedURL url.URL) (*option.Outbound
 func buildVLESSOutbound(config *model.AnyConfig) (*option.Outbound, error) {
 	vmessConfigs, ok := config.Options.([]model.VMess)
 	if !ok {
-		return nil, fmt.Errorf("got unexpected vmess config type: %T", vmessConfigs)
+		return nil, fmt.Errorf("got unexpected vless config type: %T", vmessConfigs)
 	}
 	if len(vmessConfigs) != 1 {
 		return nil, fmt.Errorf("unexpected amount of vless configs: %d", len(vmessConfigs))
