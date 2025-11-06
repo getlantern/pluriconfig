@@ -54,6 +54,9 @@ func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error
 			config.UUID = password
 		} else {
 			splitPassword := strings.Split(password, "-")
+			if len(splitPassword) < 4 {
+				return nil, fmt.Errorf("invalid uuid set in password")
+			}
 			config.AlterID = splitPassword[len(splitPassword)-1]
 			config.UUID = strings.Join(splitPassword[0:len(splitPassword)-2], "-")
 		}
