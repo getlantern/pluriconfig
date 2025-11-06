@@ -185,16 +185,24 @@ func outboundFromURL(ctx context.Context, providedURL url.URL) (*option.Outbound
 		if err != nil {
 			return nil, fmt.Errorf("couldn't extract original url value: %w", err)
 		}
-		stdProvider, exist := pluriconfig.GetProvider(string(model.ProviderURLVMessStd))
-		if !exist {
-			return nil, fmt.Errorf("missing std provider")
+		providers := []string{
+			string(model.ProviderURLVMessStd),
+			string(model.ProviderURLVMessDucksoft),
 		}
 
-		var config *model.AnyConfig
-		config, err = stdProvider.Parse(ctx, originalValue)
-		if err != nil {
-			slog.WarnContext(ctx, "failed to parse vless config with std config provider", slog.Any("error", err))
-		} else {
+		for _, providerName := range providers {
+			provider, exist := pluriconfig.GetProvider(providerName)
+			if !exist {
+				slog.WarnContext(ctx, "missing provider", slog.String("provider_name", providerName))
+				continue
+			}
+
+			config, err := provider.Parse(ctx, originalValue)
+			if err != nil {
+				slog.WarnContext(ctx, "failed to parse vmess config", slog.String("provider_name", providerName), slog.Any("error", err))
+				continue
+			}
+
 			return buildVLESSOutbound(config)
 		}
 
