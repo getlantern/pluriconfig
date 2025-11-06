@@ -1,4 +1,4 @@
-// Package qrcode parse the VMess data based on the qrcode json format into a common model.VMess object
+// Package qrcode parses the VMess data based on the qrcode json format into a common model.VMess object
 package qrcode
 
 import (
