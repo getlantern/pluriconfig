@@ -98,7 +98,7 @@ func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error
 				for _, v := range queryParams["obfsParam"] {
 					if strings.HasPrefix(v, "{") {
 						var param obfsParam
-						if err := json.Unmarshal([]byte(v), &param); err != nil {
+						if err := json.Unmarshal([]byte(v), &param); err == nil {
 							data.Host = param.Host
 						}
 					} else if data.Security == "tls" {

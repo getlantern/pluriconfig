@@ -298,7 +298,7 @@ func buildVMessOutbound(config *model.AnyConfig) (*option.Outbound, error) {
 		return nil, fmt.Errorf("got unexpected vmess config type: %T", vmessConfigs)
 	}
 	if len(vmessConfigs) != 1 {
-		return nil, fmt.Errorf("unexpected amount of trojan configs: %d", len(vmessConfigs))
+		return nil, fmt.Errorf("unexpected amount of vmess configs: %d", len(vmessConfigs))
 	}
 
 	vmessConfig := vmessConfigs[0]

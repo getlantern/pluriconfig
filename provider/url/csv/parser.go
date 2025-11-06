@@ -46,7 +46,7 @@ func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error
 		if strings.Contains(parsedURL.Scheme, "vmess") && !strings.Contains(string(decodedData), "= vmess") {
 			return nil, fmt.Errorf("protocol or url format not supported")
 		}
-		r := csv.NewReader(strings.NewReader(string(data)))
+		r := csv.NewReader(strings.NewReader(string(decodedData)))
 		for {
 			args, err := r.Read()
 			if err == io.EOF {
