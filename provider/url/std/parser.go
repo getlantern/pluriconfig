@@ -51,6 +51,7 @@ func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error
 		}
 		if strings.Contains(providedURL.Scheme, "vless") {
 			config.AlterID = ""
+			config.UUID = password
 		} else {
 			splitPassword := strings.Split(password, "-")
 			config.AlterID = splitPassword[len(splitPassword)-1]
