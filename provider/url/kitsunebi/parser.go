@@ -1,4 +1,4 @@
-// Package kitsunebi parse the VMess data with the kitsunebi format into a common model.VMess object
+// Package kitsunebi parses the VMess data with the kitsunebi format into a common model.VMess object
 package kitsunebi
 
 import (
