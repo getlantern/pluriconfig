@@ -30,7 +30,7 @@ func (p parser) Name() string {
 // Parse parses the given data into a Config object.
 func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error) {
 	lines := strings.FieldsFunc(string(data), func(r rune) bool {
-		return r == '\n' || r == '\r' || r == ' ' || r == '\t' || r == ','
+		return r == '\n' || r == ','
 	})
 	vmessConfigs := make([]model.VMess, 0)
 	for _, line := range lines {
@@ -47,10 +47,10 @@ func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error
 		}
 
 		vmessConfig.ServerOptions = model.ServerOptions{
-			Server: providedURL.Host,
+			Server: providedURL.Hostname(),
 			Port:   providedURL.Port(),
 		}
-		vmessConfig.Name = providedURL.Fragment
+		vmessConfig.Name = providedURL.EscapedFragment()
 		// if it's trojan config, we need to retrieve the password from the url username
 		if !isTrojan {
 			vmessConfig.UUID = providedURL.User.Username()

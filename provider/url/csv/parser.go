@@ -29,7 +29,7 @@ func (p parser) Name() string {
 // Parse parses the given data into a Config object.
 func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error) {
 	lines := strings.FieldsFunc(string(data), func(r rune) bool {
-		return r == '\n' || r == '\r' || r == ' ' || r == '\t' || r == ','
+		return r == '\n' || r == '\t'
 	})
 	vmessConfigs := make([]model.VMess, 0)
 	for _, line := range lines {

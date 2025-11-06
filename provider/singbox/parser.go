@@ -311,6 +311,11 @@ func buildVMessOutbound(config *model.AnyConfig) (*option.Outbound, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	security := "auto"
+	if vmessConfig.Encryption != "" {
+		security = vmessConfig.Encryption
+	}
 	transport, err := buildSingBoxOutboundTransport(vmessConfig)
 	if err != nil {
 		return nil, err
@@ -324,7 +329,7 @@ func buildVMessOutbound(config *model.AnyConfig) (*option.Outbound, error) {
 				Server:     vmessConfig.Server,
 				ServerPort: uint16(port),
 			},
-			Security: vmessConfig.Security,
+			Security: security,
 			AlterId:  aid,
 			OutboundTLSOptionsContainer: option.OutboundTLSOptionsContainer{
 				TLS: buildSingBoxOutboundTLS(vmessConfig),
@@ -526,6 +531,7 @@ func buildSingBoxOutboundTLS(config model.VMess) *option.OutboundTLSOptions {
 	}
 
 	options := &option.OutboundTLSOptions{
+		Enabled:  true,
 		Insecure: config.AllowInsecure,
 	}
 
