@@ -14,9 +14,14 @@ type AnyConfig = Config[any]
 type Provider string
 
 const (
-	ProviderSingBox Provider = "singbox"
-	ProviderURL     Provider = "url"
-	ProviderClash   Provider = "clash"
+	ProviderSingBox           Provider = "singbox"
+	ProviderURL               Provider = "url"
+	ProviderClash             Provider = "clash"
+	ProviderURLVMessCSV       Provider = "vmess-csv"
+	ProviderURLVMessQRCode    Provider = "vmess-qrcode"
+	ProviderURLVMessKitsunebi Provider = "vmess-kitsunebi"
+	ProviderURLVMessStd       Provider = "vmess-std"
+	ProviderURLVMessDucksoft  Provider = "vmess-ducksoft"
 )
 
 // V2RTransportOpts holds options for V2Ray transport configuration.
