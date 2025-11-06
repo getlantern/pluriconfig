@@ -57,6 +57,10 @@ func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error
 				return nil, fmt.Errorf("failed to read CSV line: %w", err)
 			}
 
+			if len(args) < 4 {
+				return nil, fmt.Errorf("csv record missing fields")
+			}
+
 			data := model.VMess{
 				ServerOptions: model.ServerOptions{
 					Server: args[1],
