@@ -34,12 +34,13 @@ type V2RTransportOpts struct {
 	Headers     map[string][]string
 }
 
-// VMESSConfig holds the configuration for a VMESS protocol.
-type VMESSConfig struct {
+// VMessQRCode holds the configuration for a VMESS protocol.
+type VMessQRCode struct {
 	Addr     string `json:"add"`
 	Port     string `json:"port"`
 	Aid      string `json:"aid"`
 	ALPN     string `json:"alpn"`
+	Fp       string `json:"fp"`
 	Host     string `json:"host"`
 	ID       string `json:"id"`
 	Net      string `json:"net"`
@@ -48,6 +49,44 @@ type VMESSConfig struct {
 	Security string `json:"scy"`
 	Sni      string `json:"sni"`
 	TLS      string `json:"tls"`
+	Type     string `json:"type"`
+}
+
+type VMess struct {
+	ServerOptions
+	Name    string
+	AlterID string
+
+	UUID       string
+	Encryption string
+
+	Type string
+	Host string
+	Path string
+
+	Security        string
+	SNI             string
+	ALPN            string
+	UTLSFingerPrint string
+	AllowInsecure   bool
+
+	RealityPubKey  string
+	RealityShortID string
+
+	WSMaxEarlyData      int
+	EarlyDataHeaderName string
+
+	Certificates string
+
+	EnableECH bool
+	ECHConfig string
+
+	EnableMux      bool
+	MuxPadding     bool
+	MuxType        int
+	MuxConcurrency int
+
+	PacketEncoding int
 }
 
 type SingBoxOptions struct {

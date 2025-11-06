@@ -166,7 +166,7 @@ func outboundFromVmessURL(url url.URL) (model.Outbound, error) {
 		return model.Outbound{}, fmt.Errorf("couldn't parse decode vmess base64: %w", err)
 	}
 
-	var vmessConfig model.VMESSConfig
+	var vmessConfig model.VMessQRCode
 	if err := json.Unmarshal(jsonEncoded, &vmessConfig); err != nil {
 		return model.Outbound{}, fmt.Errorf("couldn't parse vmess json: %w", err)
 	}

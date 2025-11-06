@@ -161,7 +161,7 @@ func singBoxOutboundToURL(outbound option.Outbound) (*url.URL, error) {
 			return nil, fmt.Errorf("invalid vmess options type: %T", outbound.Options)
 		}
 
-		cfg := model.VMESSConfig{
+		cfg := model.VMessQRCode{
 			Addr:     vmessOptions.Server,
 			Port:     strconv.FormatUint(uint64(vmessOptions.ServerPort), 10),
 			ID:       vmessOptions.UUID,
