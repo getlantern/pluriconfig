@@ -206,20 +206,36 @@ func outboundFromURL(ctx context.Context, providedURL url.URL) (*option.Outbound
 			return buildVLESSOutbound(config)
 		}
 
-		ducksoftProvider, exist := pluriconfig.GetProvider(string(model.ProviderURLVMessDucksoft))
-		if !exist {
-			return nil, fmt.Errorf("missing ducksoft provider")
-		}
-
-		config, err = ducksoftProvider.Parse(ctx, originalValue)
-		if err != nil {
-			slog.WarnContext(ctx, "failed to parse vless config with ducksoft config provider", slog.Any("error", err))
-			return nil, fmt.Errorf("failed to parse vless config with ducksoft config provider: %w", err)
-		}
-
-		return buildVLESSOutbound(config)
+		return nil, fmt.Errorf("tried all VLESS config providers and couldn't parse successfully")
 	case "vmess":
-		return parseV2RayURL(providedURL)
+		originalValue, err := providedURL.MarshalBinary()
+		if err != nil {
+			return nil, fmt.Errorf("couldn't extract original url value: %w", err)
+		}
+		providers := []string{
+			string(model.ProviderURLVMessCSV),
+			string(model.ProviderURLVMessQRCode),
+			string(model.ProviderURLVMessKitsunebi),
+			string(model.ProviderURLVMessStd),
+			string(model.ProviderURLVMessDucksoft),
+		}
+		for _, providerName := range providers {
+			provider, exist := pluriconfig.GetProvider(providerName)
+			if !exist {
+				slog.WarnContext(ctx, "missing provider", slog.String("provider_name", providerName))
+				continue
+			}
+
+			config, err := provider.Parse(ctx, originalValue)
+			if err != nil {
+				slog.WarnContext(ctx, "failed to parse vmess config", slog.String("provider_name", providerName), slog.Any("error", err))
+				continue
+			}
+
+			return buildVMessOutbound(config)
+		}
+
+		return nil, fmt.Errorf("tried all VMess config providers and couldn't parse successfully")
 	default:
 		return nil, fmt.Errorf("unsupported URL scheme: %s", providedURL.Scheme)
 	}
@@ -273,6 +289,48 @@ func buildVLESSOutbound(config *model.AnyConfig) (*option.Outbound, error) {
 		Type:    constant.TypeVLESS,
 		Tag:     vmessConfig.Name,
 		Options: vlessOptions,
+	}, nil
+}
+
+func buildVMessOutbound(config *model.AnyConfig) (*option.Outbound, error) {
+	vmessConfigs, ok := config.Options.([]model.VMess)
+	if !ok {
+		return nil, fmt.Errorf("got unexpected vmess config type: %T", vmessConfigs)
+	}
+	if len(vmessConfigs) != 1 {
+		return nil, fmt.Errorf("unexpected amount of trojan configs: %d", len(vmessConfigs))
+	}
+
+	vmessConfig := vmessConfigs[0]
+	port, err := strconv.ParseUint(vmessConfig.Port, 10, 16)
+	if err != nil {
+		return nil, err
+	}
+
+	aid, err := strconv.Atoi(vmessConfig.AlterID)
+	if err != nil {
+		return nil, err
+	}
+	transport, err := buildSingBoxOutboundTransport(vmessConfig)
+	if err != nil {
+		return nil, err
+	}
+	return &option.Outbound{
+		Type: constant.TypeVMess,
+		Tag:  vmessConfig.Name,
+		Options: option.VMessOutboundOptions{
+			UUID: vmessConfig.UUID,
+			ServerOptions: option.ServerOptions{
+				Server:     vmessConfig.Server,
+				ServerPort: uint16(port),
+			},
+			Security: vmessConfig.Security,
+			AlterId:  aid,
+			OutboundTLSOptionsContainer: option.OutboundTLSOptionsContainer{
+				TLS: buildSingBoxOutboundTLS(vmessConfig),
+			},
+			Transport: transport,
+		},
 	}, nil
 }
 
