@@ -1,4 +1,4 @@
-// Package csv parse the CSV data into a common model.VMess object
+// Package csv parses the CSV data into a common model.VMess object
 package csv
 
 import (
