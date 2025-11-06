@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"log/slog"
 	"net/url"
 	"strconv"
 	"strings"
@@ -180,88 +181,91 @@ func outboundFromURL(ctx context.Context, providedURL url.URL) (*option.Outbound
 			},
 		}, nil
 	case "vless":
-		port, err := strconv.ParseUint(providedURL.Port(), 10, 16)
+		originalValue, err := providedURL.MarshalBinary()
 		if err != nil {
-			return nil, fmt.Errorf("couldn't parse server port: %w", err)
+			return nil, fmt.Errorf("couldn't extract original url value: %w", err)
 		}
-		queryParams := providedURL.Query()
-		v2rTransportOpts := model.V2RTransportOpts{
-			Type:        queryParams.Get("type"),
-			Host:        queryParams.Get("host"),
-			Path:        queryParams.Get("path"),
-			Method:      queryParams.Get("method"),
-			ServiceName: queryParams.Get("serviceName"),
+		stdProvider, exist := pluriconfig.GetProvider(string(model.ProviderURLVMessStd))
+		if !exist {
+			return nil, fmt.Errorf("missing std provider")
 		}
 
-		return &option.Outbound{
-			Type: constant.TypeVLESS,
-			Tag:  providedURL.Fragment,
-			Options: option.VLESSOutboundOptions{
-				UUID: providedURL.User.Username(),
-				ServerOptions: option.ServerOptions{
-					Server:     providedURL.Hostname(),
-					ServerPort: uint16(port),
-				},
-				Transport: parseV2RayTransport(v2rTransportOpts),
-			},
-		}, nil
+		var config *model.AnyConfig
+		config, err = stdProvider.Parse(ctx, originalValue)
+		if err != nil {
+			slog.WarnContext(ctx, "failed to parse vless config with std config provider", slog.Any("error", err))
+		} else {
+			return buildVLESSOutbound(config)
+		}
+
+		ducksoftProvider, exist := pluriconfig.GetProvider(string(model.ProviderURLVMessDucksoft))
+		if !exist {
+			return nil, fmt.Errorf("missing ducksoft provider")
+		}
+
+		config, err = ducksoftProvider.Parse(ctx, originalValue)
+		if err != nil {
+			slog.WarnContext(ctx, "failed to parse vless config with ducksoft config provider", slog.Any("error", err))
+			return nil, fmt.Errorf("failed to parse vless config with ducksoft config provider: %w", err)
+		}
+
+		return buildVLESSOutbound(config)
 	case "vmess":
-		jsonEncoded, err := base64.StdEncoding.DecodeString(providedURL.Host)
-		if err != nil {
-			return nil, fmt.Errorf("couldn't parse decode vmess base64: %w", err)
-		}
-
-		var vmessConfig model.VMESSConfig
-		if err := json.Unmarshal(jsonEncoded, &vmessConfig); err != nil {
-			return nil, fmt.Errorf("couldn't parse vmess json: %w", err)
-		}
-
-		v2rOpts := model.V2RTransportOpts{
-			Type:        vmessConfig.Net,
-			Host:        vmessConfig.Host,
-			Path:        vmessConfig.Path,
-			ServiceName: vmessConfig.Host,
-		}
-
-		aid, err := strconv.Atoi(vmessConfig.Aid)
-		if err != nil {
-			return nil, fmt.Errorf("couldn't parse alter id from vmess config: %w", err)
-		}
-
-		port, err := strconv.ParseUint(vmessConfig.Port, 10, 16)
-		if err != nil {
-			return nil, fmt.Errorf("couldn't parse port from vmess config: %w", err)
-		}
-
-		vmessOptions := option.VMessOutboundOptions{
-			UUID:     vmessConfig.ID,
-			Security: vmessConfig.Security,
-			AlterId:  aid,
-			ServerOptions: option.ServerOptions{
-				Server:     vmessConfig.Addr,
-				ServerPort: uint16(port),
-			},
-			Transport: parseV2RayTransport(v2rOpts),
-		}
-		if vmessConfig.TLS == "tls" {
-			vmessOptions.OutboundTLSOptionsContainer = option.OutboundTLSOptionsContainer{
-				TLS: &option.OutboundTLSOptions{
-					Enabled:    true,
-					ServerName: vmessConfig.Sni,
-				},
-			}
-			if vmessConfig.ALPN != "" {
-				vmessOptions.OutboundTLSOptionsContainer.TLS.ALPN = badoption.Listable[string]{vmessConfig.ALPN}
-			}
-		}
-		return &option.Outbound{
-			Type:    constant.TypeVMess,
-			Tag:     vmessConfig.PS,
-			Options: vmessOptions,
-		}, nil
+		return parseV2RayURL(providedURL)
 	default:
 		return nil, fmt.Errorf("unsupported URL scheme: %s", providedURL.Scheme)
 	}
+}
+
+func buildVLESSOutbound(config *model.AnyConfig) (*option.Outbound, error) {
+	vmessConfigs, ok := config.Options.([]model.VMess)
+	if !ok {
+		return nil, fmt.Errorf("got unexpected vmess config type: %T", vmessConfigs)
+	}
+	if len(vmessConfigs) != 1 {
+		return nil, fmt.Errorf("unexpected amount of trojan configs: %d", len(vmessConfigs))
+	}
+
+	vmessConfig := vmessConfigs[0]
+	port, err := strconv.ParseUint(vmessConfig.Port, 10, 16)
+	if err != nil {
+		return nil, err
+	}
+	transport, err := buildSingBoxOutboundTransport(vmessConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	vlessOptions := option.VLESSOutboundOptions{
+		ServerOptions: option.ServerOptions{
+			Server:     vmessConfig.Server,
+			ServerPort: uint16(port),
+		},
+		UUID: vmessConfig.UUID,
+		OutboundTLSOptionsContainer: option.OutboundTLSOptionsContainer{
+			TLS: buildSingBoxOutboundTLS(vmessConfig),
+		},
+		Transport: transport,
+	}
+	if vmessConfig.Encryption != "" && vmessConfig.Encryption != "auto" {
+		vlessOptions.Flow = vmessConfig.Encryption
+	}
+	switch vmessConfig.PacketEncoding {
+	case 0:
+		vlessOptions.PacketEncoding = nil
+	case 1:
+		packetEncoding := "packetaddr"
+		vlessOptions.PacketEncoding = &packetEncoding
+	case 2:
+		packetEncoding := "xudp"
+		vlessOptions.PacketEncoding = &packetEncoding
+	}
+
+	return &option.Outbound{
+		Type:    constant.TypeVLESS,
+		Tag:     vmessConfig.Name,
+		Options: vlessOptions,
+	}, nil
 }
 
 func parseV2RayTransport(opts model.V2RTransportOpts) *option.V2RayTransportOptions {
