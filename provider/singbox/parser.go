@@ -119,7 +119,7 @@ func outboundFromURL(providedURL url.URL) (*option.Outbound, error) {
 		}
 
 		queryParams := providedURL.Query()
-		if plugin := queryParams.Get("plugin"); queryParams.Has("plugin") && plugin != "" {
+		if plugin := queryParams.Get("plugin"); plugin != "" {
 			if strings.HasPrefix(plugin, "simple-obfs") {
 				plugin = strings.Replace(plugin, "simple-obfs", "obfs-local", 1)
 			}
