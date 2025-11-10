@@ -125,14 +125,7 @@ func outboundFromURL(providedURL url.URL) (*option.Outbound, error) {
 			}
 
 			if plugin != "none" {
-				semicolonIndex := strings.Index(plugin, ";")
-				if semicolonIndex == -1 {
-					ssOptions.Plugin = plugin
-					ssOptions.PluginOptions = ""
-				} else {
-					ssOptions.Plugin = plugin[0:semicolonIndex]
-					ssOptions.PluginOptions = plugin[semicolonIndex+1:]
-				}
+				ssOptions.Plugin, ssOptions.PluginOptions, _ = strings.Cut(plugin, ";")
 			}
 		}
 
