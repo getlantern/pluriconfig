@@ -309,7 +309,7 @@ func buildHysteriaSingBox(config model.Hysteria) (*option.Outbound, error) {
 	}
 
 	if config.ALPN != "" {
-		options.OutboundTLSOptionsContainer.TLS.ALPN = badoption.Listable[string]{config.ALPN}
+		options.OutboundTLSOptionsContainer.TLS.ALPN = strings.FieldsFunc(config.ALPN, func(r rune) bool { return r == ',' || r == '\n' })
 	}
 
 	if config.CaText != "" {
@@ -565,6 +565,48 @@ func outboundFromClash(outbound model.Outbound) (*option.Outbound, error) {
 				OutboundTLSOptionsContainer: outboundTLSOptionContainer,
 			},
 		}, nil
+	case "hysteria":
+		hysteriaOpts, ok := outbound.Options.(model.HysteriaOutboundOptions)
+		if !ok {
+			return nil, fmt.Errorf("invalid hysteria outbound options type: %T", outbound.Options)
+		}
+
+		return buildHysteriaSingBox(model.Hysteria{
+			Name:                outbound.Name,
+			ProtocolVersion:     1,
+			ServerOptions:       hysteriaOpts.ServerOptions,
+			ServerPorts:         hysteriaOpts.ServerPorts,
+			AuthPayload:         hysteriaOpts.AuthPayload,
+			AuthPayloadType:     1,
+			UploadMbps:          hysteriaOpts.UploadMbps,
+			DownloadMbps:        hysteriaOpts.DownloadMbps,
+			Obfuscation:         hysteriaOpts.Obfuscation,
+			DisableMTUDiscovery: hysteriaOpts.DisableMTUDiscovery,
+			StreamReceiveWindow: hysteriaOpts.StreamReceiveWindow,
+			ConnReceiveWindow:   hysteriaOpts.ConnReceiveWindow,
+			SNI:                 hysteriaOpts.SNI,
+			ALPN:                strings.Join(hysteriaOpts.ALPN, ","),
+			AllowInsecure:       hysteriaOpts.AllowInsecure,
+		})
+	case "hysteria2":
+		hysteria2Opts, ok := outbound.Options.(model.Hysteria2OutboundOptions)
+		if !ok {
+			return nil, fmt.Errorf("invalid hysteria2 outbound options type: %T", outbound.Options)
+		}
+		return buildHysteria2SingBox(model.Hysteria{
+			Name:            outbound.Name,
+			ProtocolVersion: 2,
+			ServerOptions:   hysteria2Opts.ServerOptions,
+			ServerPorts:     hysteria2Opts.ServerPorts,
+			AuthPayload:     hysteria2Opts.Password,
+			AuthPayloadType: 1,
+			UploadMbps:      hysteria2Opts.UploadMbps,
+			DownloadMbps:    hysteria2Opts.DownloadMbps,
+			Obfuscation:     hysteria2Opts.ObfuscationPassword,
+			SNI:             hysteria2Opts.SNI,
+			AllowInsecure:   hysteria2Opts.AllowInsecure,
+		})
+
 	default:
 		return nil, fmt.Errorf("unsupported outbound type: %s", outbound.Type)
 	}

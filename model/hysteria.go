@@ -5,15 +5,15 @@ type Hysteria struct {
 	ServerOptions
 	ProtocolVersion int
 
-	ServerPorts string `yaml:"ports"`
+	ServerPorts string
 
 	AuthPayload         string
 	Obfuscation         string
 	SNI                 string
 	CaText              string
-	UploadMbps          int  `yaml:"up"`
-	DownloadMbps        int  `yaml:"down"`
-	AllowInsecure       bool `yaml:"skip-cert-verify"`
+	UploadMbps          int
+	DownloadMbps        int
+	AllowInsecure       bool
 	StreamReceiveWindow int
 	ConnReceiveWindow   int
 	DisableMTUDiscovery bool
