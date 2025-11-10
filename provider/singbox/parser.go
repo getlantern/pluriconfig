@@ -377,7 +377,7 @@ func hopPortsToSingboxList(serverPorts string) []string {
 	var portList []string
 	for _, r := range strings.Split(serverPorts, ",") {
 		pRange := strings.ReplaceAll(r, "-", ":")
-		if len(strings.Split(pRange, "-")) == 2 {
+		if len(strings.Split(pRange, ":")) == 2 {
 			portList = append(portList, pRange)
 		}
 	}
