@@ -220,10 +220,10 @@ func TestParser_Serialize(t *testing.T) {
 				require.NoError(t, err)
 				decoded, err := base64.StdEncoding.DecodeString(u.Host)
 				require.NoError(t, err, u)
-				var cfg model.VMESSConfig
+				var cfg model.VMessQRCode
 				require.NoError(t, json.Unmarshal(decoded, &cfg), "couldn't unmarshal vmess config: %+v", u)
 				assert.Equal(t, "vmesshost", cfg.Addr)
-				assert.Equal(t, uint16(1000), cfg.Port)
+				assert.Equal(t, "1000", cfg.Port)
 				assert.Equal(t, "uuid", cfg.ID)
 				assert.Equal(t, "tls", cfg.TLS)
 				assert.Equal(t, "ws", cfg.Net)
