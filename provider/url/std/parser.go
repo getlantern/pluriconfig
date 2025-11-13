@@ -50,7 +50,6 @@ func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error
 			Type: protocol,
 		}
 		if strings.Contains(providedURL.Scheme, "vless") {
-			config.AlterID = ""
 			config.UUID = password
 		} else {
 			splitPassword := strings.Split(password, "-")
@@ -72,24 +71,13 @@ func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error
 
 		switch protocol {
 		case "http":
-			if queryParams.Has("path") {
-				config.Path = queryParams.Get("path")
-			}
-			if queryParams.Has("host") {
-				splitHostValues := strings.Split(queryParams.Get("host"), "|")
-				config.Host = strings.Join(splitHostValues, ",")
-			}
+			config.Path = queryParams.Get("path")
+			config.Host = strings.ReplaceAll(queryParams.Get("host"), "|", ",")
 		case "ws", "httpupgrade":
-			if queryParams.Has("path") {
-				config.Path = queryParams.Get("path")
-			}
-			if queryParams.Has("host") {
-				config.Host = queryParams.Get("host")
-			}
+			config.Path = queryParams.Get("path")
+			config.Host = queryParams.Get("host")
 		case "grpc":
-			if queryParams.Has("serviceName") {
-				config.Path = queryParams.Get("serviceName")
-			}
+			config.Path = queryParams.Get("serviceName")
 		}
 		vmessConfigs = append(vmessConfigs, config)
 	}
