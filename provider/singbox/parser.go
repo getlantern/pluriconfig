@@ -118,6 +118,17 @@ func outboundFromURL(providedURL url.URL) (*option.Outbound, error) {
 			ssOptions.Password = splitUsername[1]
 		}
 
+		queryParams := providedURL.Query()
+		if plugin := queryParams.Get("plugin"); plugin != "" {
+			if strings.HasPrefix(plugin, "simple-obfs") {
+				plugin = strings.Replace(plugin, "simple-obfs", "obfs-local", 1)
+			}
+
+			if plugin != "none" {
+				ssOptions.Plugin, ssOptions.PluginOptions, _ = strings.Cut(plugin, ";")
+			}
+		}
+
 		return &option.Outbound{
 			Type:    constant.TypeShadowsocks,
 			Tag:     providedURL.Fragment,
