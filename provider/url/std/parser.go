@@ -58,7 +58,7 @@ func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error
 				return nil, fmt.Errorf("invalid uuid set in password")
 			}
 			config.AlterID = splitPassword[len(splitPassword)-1]
-			config.UUID = strings.Join(splitPassword[0:len(splitPassword)-2], "-")
+			config.UUID = strings.Join(splitPassword[0:len(splitPassword)-1], "-")
 		}
 
 		queryParams := providedURL.Query()
