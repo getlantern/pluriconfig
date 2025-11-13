@@ -14,9 +14,11 @@ type AnyConfig = Config[any]
 type Provider string
 
 const (
-	ProviderSingBox Provider = "singbox"
-	ProviderURL     Provider = "url"
-	ProviderClash   Provider = "clash"
+	ProviderSingBox   Provider = "singbox"
+	ProviderURL       Provider = "url"
+	ProviderClash     Provider = "clash"
+	ProviderHysteria  Provider = "hysteria"
+	ProviderHysteria2 Provider = "hysteria2"
 )
 
 // V2RTransportOpts holds options for V2Ray transport configuration.
