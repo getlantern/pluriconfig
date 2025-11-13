@@ -1,7 +1,8 @@
 // Package ducksoft implements a ducksoft parser that can be used for parsing
-// vmess, vless, and trojan configurations. Note that trojan configurations must
-// retrieve the password from the URL username. This parser parses vmess, vless,
-// and trojan configurations, and returns them as VMess structs.
+// vmess, vless, and trojan configurations by returning a VMESS data structure.
+// Note that trojan configurations must retrieve the password from the URL username.
+// URL Example:
+// protocol://$(uuid)@remote-host:remote-port?<protocol-specific fields><transport-specific fields><tls-specific fields>#$(descriptive-text)
 package ducksoft
 
 import (
