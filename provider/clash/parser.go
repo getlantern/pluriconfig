@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/getlantern/pluriconfig"
@@ -165,7 +166,7 @@ func outboundFromVmessURL(url url.URL) (model.Outbound, error) {
 		return model.Outbound{}, fmt.Errorf("couldn't parse decode vmess base64: %w", err)
 	}
 
-	var vmessConfig model.VMESSConfig
+	var vmessConfig model.VMessQRCode
 	if err := json.Unmarshal(jsonEncoded, &vmessConfig); err != nil {
 		return model.Outbound{}, fmt.Errorf("couldn't parse vmess json: %w", err)
 	}
@@ -175,13 +176,18 @@ func outboundFromVmessURL(url url.URL) (model.Outbound, error) {
 		Path:        vmessConfig.Path,
 		ServiceName: vmessConfig.Host,
 	}
+	aid, err := strconv.Atoi(vmessConfig.Aid)
+	if err != nil {
+		return model.Outbound{}, fmt.Errorf("couldn't parse alter id from vmess config: %w", err)
+	}
+
 	options := model.VMESSOutboundOptions{
 		ServerOptions: model.ServerOptions{
 			Server: vmessConfig.Addr,
-			Port:   fmt.Sprintf("%d", vmessConfig.Port),
+			Port:   vmessConfig.Port,
 		},
 		UUID:    vmessConfig.ID,
-		AlterID: vmessConfig.Aid,
+		AlterID: aid,
 		Cipher:  vmessConfig.Security,
 	}
 
