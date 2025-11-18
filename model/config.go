@@ -22,6 +22,8 @@ const (
 	ProviderURLVMessKitsunebi Provider = "vmess-kitsunebi"
 	ProviderURLVMessStd       Provider = "vmess-std"
 	ProviderURLVMessDucksoft  Provider = "vmess-ducksoft"
+	ProviderHysteria          Provider = "hysteria"
+	ProviderHysteria2         Provider = "hysteria2"
 )
 
 // V2RTransportOpts holds options for V2Ray transport configuration.

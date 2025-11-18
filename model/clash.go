@@ -116,3 +116,36 @@ type TrojanOutboundWSOpts struct {
 	Path    string              `yaml:"path,omitempty"`
 	Headers map[string][]string `yaml:"headers,omitempty"`
 }
+
+type HysteriaOutboundOptions struct {
+	ServerOptions
+	ServerPorts         string   `yaml:"ports"`
+	AuthPayload         string   `yaml:"auth-str"`
+	Obfuscation         string   `yaml:"obfs"`
+	SNI                 string   `yaml:"sni"`
+	UploadMbps          int      `yaml:"up"`
+	DownloadMbps        int      `yaml:"down"`
+	AllowInsecure       bool     `yaml:"skip-cert-verify"`
+	StreamReceiveWindow int      `yaml:"recv-window"`
+	ConnReceiveWindow   int      `yaml:"recv-window-conn"`
+	DisableMTUDiscovery bool     `yaml:"disable_mtu_discovery"`
+	ALPN                []string `yaml:"alpn"`
+	Protocol            string   `yaml:"protocol"`
+	HopInterval         int
+	AuthPayloadType     int
+}
+
+type Hysteria2OutboundOptions struct {
+	ServerOptions
+	ServerPorts         string   `yaml:"ports"`
+	Password            string   `yaml:"password"`
+	Obfuscation         string   `yaml:"obfs"`
+	ObfuscationPassword string   `yaml:"obfs-password"`
+	SNI                 string   `yaml:"sni"`
+	UploadMbps          int      `yaml:"up"`
+	DownloadMbps        int      `yaml:"down"`
+	AllowInsecure       bool     `yaml:"skip-cert-verify"`
+	DisableMTUDiscovery bool     `yaml:"disable_mtu_discovery"`
+	ALPN                []string `yaml:"alpn"`
+	Protocol            string   `yaml:"protocol"`
+}

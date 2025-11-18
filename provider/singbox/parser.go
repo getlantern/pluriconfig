@@ -14,6 +14,8 @@ import (
 	"github.com/getlantern/pluriconfig/model"
 	_ "github.com/getlantern/pluriconfig/provider/url/csv"
 	_ "github.com/getlantern/pluriconfig/provider/url/ducksoft"
+	_ "github.com/getlantern/pluriconfig/provider/url/hysteria"
+	_ "github.com/getlantern/pluriconfig/provider/url/hysteria2"
 	_ "github.com/getlantern/pluriconfig/provider/url/kitsunebi"
 	_ "github.com/getlantern/pluriconfig/provider/url/qrcode"
 	_ "github.com/getlantern/pluriconfig/provider/url/std"
@@ -191,6 +193,36 @@ func outboundFromURL(ctx context.Context, providedURL url.URL) (*option.Outbound
 				Transport: transport,
 			},
 		}, nil
+	case "hysteria":
+		hysteriaProvider, exist := pluriconfig.GetProvider(string(model.ProviderHysteria))
+		if !exist {
+			return nil, fmt.Errorf("hysteria config provider not found")
+		}
+
+		hysteriaConfig, err := hysteriaProvider.Parse(ctx, []byte(providedURL.String()))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse hysteria URL: %w", err)
+		}
+		config, ok := hysteriaConfig.Options.(model.Hysteria)
+		if !ok {
+			return nil, fmt.Errorf("invalid hysteria config options type: %T", hysteriaConfig.Options)
+		}
+
+		return buildHysteriaSingBox(config)
+	case "hysteria2", "hy2":
+		hysteria2Provider, exist := pluriconfig.GetProvider(string(model.ProviderHysteria2))
+		if !exist {
+			return nil, fmt.Errorf("hysteria2 config provider not found")
+		}
+		hysteria2Config, err := hysteria2Provider.Parse(ctx, []byte(providedURL.String()))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse hysteria2 URL: %w", err)
+		}
+		config, ok := hysteria2Config.Options.(model.Hysteria)
+		if !ok {
+			return nil, fmt.Errorf("invalid hysteria2 config options type: %T", hysteria2Config.Options)
+		}
+		return buildHysteria2SingBox(config)
 	case "vless":
 		originalValue, err := providedURL.MarshalBinary()
 		if err != nil {
@@ -250,6 +282,127 @@ func outboundFromURL(ctx context.Context, providedURL url.URL) (*option.Outbound
 	default:
 		return nil, fmt.Errorf("unsupported URL scheme: %s", providedURL.Scheme)
 	}
+}
+
+func buildHysteriaSingBox(config model.Hysteria) (*option.Outbound, error) {
+	options := option.HysteriaOutboundOptions{
+		ServerOptions: option.ServerOptions{
+			Server: config.Server,
+		},
+		UpMbps:              config.UploadMbps,
+		DownMbps:            config.DownloadMbps,
+		Obfs:                config.Obfuscation,
+		DisableMTUDiscovery: config.DisableMTUDiscovery,
+		OutboundTLSOptionsContainer: option.OutboundTLSOptionsContainer{
+			TLS: &option.OutboundTLSOptions{
+				Enabled:  true,
+				Insecure: config.AllowInsecure,
+			},
+		},
+	}
+	if config.Port != "" {
+		port, err := strconv.ParseUint(config.Port, 10, 16)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't parse server port: %w", err)
+		}
+		options.ServerPort = uint16(port)
+	}
+
+	switch config.AuthPayloadType {
+	case 1:
+		// case string
+		options.AuthString = config.AuthPayload
+	case 2:
+		// case base64
+		options.Auth = []byte(config.AuthPayload)
+	}
+
+	if config.StreamReceiveWindow > 0 {
+		options.ReceiveWindow = uint64(config.StreamReceiveWindow)
+	}
+
+	if config.ConnReceiveWindow > 0 {
+		options.ReceiveWindowConn = uint64(config.ConnReceiveWindow)
+	}
+
+	if config.SNI != "" {
+		options.OutboundTLSOptionsContainer.TLS.ServerName = config.SNI
+	}
+
+	if config.ALPN != "" {
+		options.OutboundTLSOptionsContainer.TLS.ALPN = strings.FieldsFunc(config.ALPN, func(r rune) bool { return r == ',' || r == '\n' })
+	}
+
+	if config.CaText != "" {
+		options.OutboundTLSOptionsContainer.TLS.Certificate = badoption.Listable[string]{config.CaText}
+	}
+
+	return &option.Outbound{
+		Type:    constant.TypeHysteria,
+		Tag:     config.Name,
+		Options: options,
+	}, nil
+}
+
+func buildHysteria2SingBox(config model.Hysteria) (*option.Outbound, error) {
+	options := option.Hysteria2OutboundOptions{
+		ServerOptions: option.ServerOptions{
+			Server: config.Server,
+		},
+		UpMbps:      config.UploadMbps,
+		DownMbps:    config.DownloadMbps,
+		HopInterval: badoption.Duration(config.HopInterval),
+		Password:    config.AuthPayload,
+		OutboundTLSOptionsContainer: option.OutboundTLSOptionsContainer{
+			TLS: &option.OutboundTLSOptions{
+				Enabled:  true,
+				Insecure: config.AllowInsecure,
+				ALPN:     badoption.Listable[string]{"h3"},
+			},
+		},
+	}
+	if config.Port != "" {
+		port, err := strconv.ParseUint(config.Port, 10, 16)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't parse server port: %w", err)
+		}
+		options.ServerPort = uint16(port)
+	} else {
+		options.ServerPorts = hopPortsToSingboxList(config.ServerPorts)
+	}
+
+	if config.Obfuscation != "" {
+		options.Obfs = &option.Hysteria2Obfs{
+			Type:     "salamander",
+			Password: config.Obfuscation,
+		}
+	}
+
+	if config.SNI != "" {
+		options.OutboundTLSOptionsContainer.TLS.ServerName = config.SNI
+	}
+
+	if config.CaText != "" {
+		options.OutboundTLSOptionsContainer.TLS.Certificate = badoption.Listable[string]{config.CaText}
+	}
+
+	return &option.Outbound{
+		Type:    constant.TypeHysteria2,
+		Tag:     config.Name,
+		Options: options,
+	}, nil
+
+}
+
+func hopPortsToSingboxList(serverPorts string) []string {
+	var portList []string
+	for _, r := range strings.Split(serverPorts, ",") {
+		pRange := strings.ReplaceAll(r, "-", ":")
+		if len(strings.Split(pRange, ":")) == 2 {
+			portList = append(portList, pRange)
+		}
+	}
+	return portList
 }
 
 func buildVLESSOutbound(config *model.AnyConfig) (*option.Outbound, error) {
@@ -531,6 +684,48 @@ func outboundFromClash(outbound model.Outbound) (*option.Outbound, error) {
 				OutboundTLSOptionsContainer: outboundTLSOptionContainer,
 			},
 		}, nil
+	case "hysteria":
+		hysteriaOpts, ok := outbound.Options.(model.HysteriaOutboundOptions)
+		if !ok {
+			return nil, fmt.Errorf("invalid hysteria outbound options type: %T", outbound.Options)
+		}
+
+		return buildHysteriaSingBox(model.Hysteria{
+			Name:                outbound.Name,
+			ProtocolVersion:     1,
+			ServerOptions:       hysteriaOpts.ServerOptions,
+			ServerPorts:         hysteriaOpts.ServerPorts,
+			AuthPayload:         hysteriaOpts.AuthPayload,
+			AuthPayloadType:     1,
+			UploadMbps:          hysteriaOpts.UploadMbps,
+			DownloadMbps:        hysteriaOpts.DownloadMbps,
+			Obfuscation:         hysteriaOpts.Obfuscation,
+			DisableMTUDiscovery: hysteriaOpts.DisableMTUDiscovery,
+			StreamReceiveWindow: hysteriaOpts.StreamReceiveWindow,
+			ConnReceiveWindow:   hysteriaOpts.ConnReceiveWindow,
+			SNI:                 hysteriaOpts.SNI,
+			ALPN:                strings.Join(hysteriaOpts.ALPN, ","),
+			AllowInsecure:       hysteriaOpts.AllowInsecure,
+		})
+	case "hysteria2":
+		hysteria2Opts, ok := outbound.Options.(model.Hysteria2OutboundOptions)
+		if !ok {
+			return nil, fmt.Errorf("invalid hysteria2 outbound options type: %T", outbound.Options)
+		}
+		return buildHysteria2SingBox(model.Hysteria{
+			Name:            outbound.Name,
+			ProtocolVersion: 2,
+			ServerOptions:   hysteria2Opts.ServerOptions,
+			ServerPorts:     hysteria2Opts.ServerPorts,
+			AuthPayload:     hysteria2Opts.Password,
+			AuthPayloadType: 1,
+			UploadMbps:      hysteria2Opts.UploadMbps,
+			DownloadMbps:    hysteria2Opts.DownloadMbps,
+			Obfuscation:     hysteria2Opts.ObfuscationPassword,
+			SNI:             hysteria2Opts.SNI,
+			AllowInsecure:   hysteria2Opts.AllowInsecure,
+		})
+
 	default:
 		return nil, fmt.Errorf("unsupported outbound type: %s", outbound.Type)
 	}
