@@ -48,21 +48,10 @@ func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error
 	}
 
 	queryParams := providedURL.Query()
-	if queryParams.Has("mport") {
-		hysteria.ServerPorts = queryParams.Get("mport")
-	}
-
-	if queryParams.Has("sni") {
-		hysteria.SNI = queryParams.Get("sni")
-	}
-
-	if queryParams.Has("insecure") {
-		hysteria.AllowInsecure = queryParams.Get("insecure") == "1" || queryParams.Get("insecure") == "true"
-	}
-
-	if queryParams.Has("obfs-password") {
-		hysteria.Obfuscation = queryParams.Get("obfs-password")
-	}
+	hysteria.ServerPorts = queryParams.Get("mport")
+	hysteria.SNI = queryParams.Get("sni")
+	hysteria.AllowInsecure = queryParams.Get("insecure") == "1" || queryParams.Get("insecure") == "true"
+	hysteria.Obfuscation = queryParams.Get("obfs-password")
 
 	return &model.AnyConfig{
 		Type:    model.ProviderHysteria2,

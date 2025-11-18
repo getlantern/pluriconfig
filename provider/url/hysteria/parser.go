@@ -43,22 +43,17 @@ func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error
 	}
 
 	queryParams := providedURL.Query()
-	if queryParams.Has("mport") {
-		hysteria.ServerPorts = queryParams.Get("mport")
-	}
-
-	if queryParams.Has("peer") {
-		hysteria.SNI = queryParams.Get("peer")
-	}
-
+	hysteria.ServerPorts = queryParams.Get("mport")
+	hysteria.SNI = queryParams.Get("peer")
 	if queryParams.Has("auth") && queryParams.Get("auth") != "" {
 		hysteria.AuthPayload = queryParams.Get("auth")
 		hysteria.AuthPayloadType = 1
 	}
 
-	if queryParams.Has("allowInsecure") {
-		hysteria.AllowInsecure = queryParams.Get("allowInsecure") == "1" || queryParams.Get("allowInsecure") == "true"
-	}
+	hysteria.AllowInsecure = queryParams.Get("allowInsecure") == "1" ||
+		queryParams.Get("allowInsecure") == "true" ||
+		queryParams.Get("insecure") == "1" ||
+		queryParams.Get("insecure") == "true"
 
 	up := 10
 	if queryParams.Has("upmbps") {
@@ -81,22 +76,14 @@ func (p parser) Parse(ctx context.Context, data []byte) (*model.AnyConfig, error
 		}
 	}
 	hysteria.DownloadMbps = down
+	hysteria.ALPN = queryParams.Get("alpn")
+	hysteria.Obfuscation = queryParams.Get("obfsParam")
 
-	if queryParams.Has("alpn") {
-		hysteria.ALPN = queryParams.Get("alpn")
-	}
-
-	if queryParams.Has("obfsParam") {
-		hysteria.Obfuscation = queryParams.Get("obfsParam")
-	}
-
-	if queryParams.Has("protocol") {
-		switch queryParams.Get("protocol") {
-		case "faketcp":
-			hysteria.Protocol = 1
-		case "wechat-video":
-			hysteria.Protocol = 2
-		}
+	switch queryParams.Get("protocol") {
+	case "faketcp":
+		hysteria.Protocol = 1
+	case "wechat-video":
+		hysteria.Protocol = 2
 	}
 
 	return &model.AnyConfig{
