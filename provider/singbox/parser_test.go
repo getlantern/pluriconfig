@@ -6,9 +6,10 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/getlantern/pluriconfig/model"
-	sbx "github.com/getlantern/sing-box-extensions"
+	box "github.com/getlantern/lantern-box"
 	"github.com/sagernet/sing-box/option"
+
+	"github.com/getlantern/pluriconfig/model"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,7 +32,7 @@ func TestParser_Parse(t *testing.T) {
 		],
 	}`)
 
-	cfg, err := p.Parse(sbx.BoxContext(), jsonData)
+	cfg, err := p.Parse(box.BoxContext(), jsonData)
 	require.NoError(t, err, "Parse() error")
 
 	assert.Equal(t, model.ProviderSingBox, cfg.Type)
@@ -41,7 +42,7 @@ func TestParser_Parse(t *testing.T) {
 
 func TestParser_Serialize(t *testing.T) {
 	p := parser{}
-	ctx := sbx.BoxContext()
+	ctx := box.BoxContext()
 	expectedSSConfig := `{"outbounds": [{"tag": "ss-out", "type": "shadowsocks", "server": "127.0.0.1", "server_port": 8388, "method": "chacha20-ietf-poly1305", "password": "randompasswordwith24char"}]}`
 	ssURL := url.URL{
 		Scheme:   "ss",
