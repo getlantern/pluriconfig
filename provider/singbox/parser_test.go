@@ -32,7 +32,7 @@ func TestParser_Parse(t *testing.T) {
 		],
 	}`)
 
-	cfg, err := p.Parse(box.BoxContext(), jsonData)
+	cfg, err := p.Parse(box.BaseContext(), jsonData)
 	require.NoError(t, err, "Parse() error")
 
 	assert.Equal(t, model.ProviderSingBox, cfg.Type)
@@ -42,7 +42,7 @@ func TestParser_Parse(t *testing.T) {
 
 func TestParser_Serialize(t *testing.T) {
 	p := parser{}
-	ctx := box.BoxContext()
+	ctx := box.BaseContext()
 	expectedSSConfig := `{"outbounds": [{"tag": "ss-out", "type": "shadowsocks", "server": "127.0.0.1", "server_port": 8388, "method": "chacha20-ietf-poly1305", "password": "randompasswordwith24char"}]}`
 	ssURL := url.URL{
 		Scheme:   "ss",
