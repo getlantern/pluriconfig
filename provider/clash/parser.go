@@ -98,6 +98,8 @@ func convertSingBoxToClashProxy(opt option.Outbound) (model.Outbound, error) {
 		return convertSingBoxTrojanToClashProxy(opt)
 	case "vmess":
 		return convertSingBoxVMessToClashProxy(opt)
+	case "anytls":
+		return convertSingBoxAnyTLSToClashProxy(opt)
 	default:
 		return model.Outbound{}, fmt.Errorf("unsupported sing-box outbound type: %s", opt.Type)
 	}
@@ -105,6 +107,8 @@ func convertSingBoxToClashProxy(opt option.Outbound) (model.Outbound, error) {
 
 func convertURLToClashProxy(url url.URL) (model.Outbound, error) {
 	switch url.Scheme {
+	case "anytls":
+		return outboundFromAnyTLSURL(url)
 	case "ss":
 		return outboundFromShadowsocksURL(url)
 	case "ssr":
@@ -371,5 +375,59 @@ func convertSingBoxVMessToClashProxy(opt option.Outbound) (model.Outbound, error
 		Name:    opt.Tag,
 		Type:    "vmess",
 		Options: vmessOptions,
+	}, nil
+}
+
+func convertSingBoxAnyTLSToClashProxy(opt option.Outbound) (model.Outbound, error) {
+	providedAnyTLSOptions, ok := opt.Options.(option.AnyTLSOutboundOptions)
+	if !ok {
+		return model.Outbound{}, fmt.Errorf("invalid anytls options type: %T", opt.Options)
+	}
+
+	anyTLSOptions := model.AnyTLSOutboundOptions{
+		ServerOptions: model.ServerOptions{
+			Server: providedAnyTLSOptions.Server,
+			Port:   fmt.Sprintf("%d", providedAnyTLSOptions.ServerPort),
+		},
+		Password:                 providedAnyTLSOptions.Password,
+		IdleSessionCheckInterval: int(providedAnyTLSOptions.IdleSessionCheckInterval.Build().Seconds()),
+		IdleSessionTimeout:       int(providedAnyTLSOptions.IdleSessionTimeout.Build().Seconds()),
+		MinIdleSession:           providedAnyTLSOptions.MinIdleSession,
+	}
+
+	if providedAnyTLSOptions.TLS != nil {
+		anyTLSOptions.SNI = providedAnyTLSOptions.TLS.ServerName
+		anyTLSOptions.SkipCertVerify = providedAnyTLSOptions.TLS.Insecure
+		anyTLSOptions.ALPN = providedAnyTLSOptions.TLS.ALPN
+		if providedAnyTLSOptions.TLS.UTLS != nil {
+			anyTLSOptions.Fingerprint = providedAnyTLSOptions.TLS.UTLS.Fingerprint
+		}
+	}
+
+	return model.Outbound{
+		Name:    opt.Tag,
+		Type:    "anytls",
+		Options: anyTLSOptions,
+	}, nil
+}
+
+func outboundFromAnyTLSURL(url url.URL) (model.Outbound, error) {
+	queryParams := url.Query()
+	return model.Outbound{
+		Name: url.Fragment,
+		Type: url.Scheme,
+		Options: model.AnyTLSOutboundOptions{
+			ServerOptions: model.ServerOptions{
+				Server: url.Hostname(),
+				Port:   url.Port(),
+			},
+			Password:    url.User.Username(),
+			SNI:         queryParams.Get("sni"),
+			Fingerprint: queryParams.Get("fp"),
+			ALPN: strings.FieldsFunc(queryParams.Get("alpn"), func(r rune) bool {
+				return r == '\n' || r == '\r' || r == ' ' || r == '\t' || r == ','
+			}),
+			SkipCertVerify: queryParams.Get("insecure") == "1" || queryParams.Get("insecure") == "true",
+		},
 	}, nil
 }

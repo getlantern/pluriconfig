@@ -149,3 +149,15 @@ type Hysteria2OutboundOptions struct {
 	ALPN                []string `yaml:"alpn"`
 	Protocol            string   `yaml:"protocol"`
 }
+
+type AnyTLSOutboundOptions struct {
+	ServerOptions
+	Fingerprint              string   `yaml:"client-fingerprint"`
+	Password                 string   `yaml:"password"`
+	SNI                      string   `yaml:"sni"`
+	ALPN                     []string `yaml:"alpn"`
+	IdleSessionCheckInterval int      `yaml:"idle-session-check-interval"`
+	IdleSessionTimeout       int      `yaml:"idle-session-timeout"`
+	MinIdleSession           int      `yaml:"min-idle-session"`
+	SkipCertVerify           bool     `yaml:"skip-cert-verify"`
+}
