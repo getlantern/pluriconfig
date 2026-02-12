@@ -110,6 +110,39 @@ func singBoxOutboundToURL(outbound option.Outbound) (*url.URL, error) {
 			u.Fragment = outbound.Tag
 		}
 		return u, nil
+	case "anytls":
+		anytlsOptions, ok := outbound.Options.(option.AnyTLSOutboundOptions)
+		if !ok {
+			return nil, fmt.Errorf("invalid anytls options type: %T", outbound.Options)
+		}
+		u := &url.URL{
+			Scheme: "anytls",
+			Host:   fmt.Sprintf("%s:%d", anytlsOptions.Server, anytlsOptions.ServerPort),
+		}
+		if anytlsOptions.Password != "" {
+			u.User = url.User(anytlsOptions.Password)
+		}
+
+		queryParams := u.Query()
+		if anytlsOptions.TLS != nil {
+			if anytlsOptions.TLS.Insecure {
+				queryParams.Add("insecure", "1")
+			}
+
+			if anytlsOptions.TLS.ServerName != "" {
+				queryParams.Add("sni", anytlsOptions.TLS.ServerName)
+			}
+
+			if anytlsOptions.TLS.UTLS != nil && anytlsOptions.TLS.UTLS.Fingerprint != "" {
+				queryParams.Add("fp", anytlsOptions.TLS.UTLS.Fingerprint)
+			}
+		}
+		u.RawQuery = queryParams.Encode()
+
+		if outbound.Tag != "" {
+			u.Fragment = outbound.Tag
+		}
+		return u, nil
 	case "trojan":
 		trojanOptions, ok := outbound.Options.(option.TrojanOutboundOptions)
 		if !ok {

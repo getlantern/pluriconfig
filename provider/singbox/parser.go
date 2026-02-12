@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/getlantern/pluriconfig"
 	"github.com/getlantern/pluriconfig/model"
@@ -101,6 +102,50 @@ func (p parser) Serialize(ctx context.Context, config *model.AnyConfig) ([]byte,
 
 func outboundFromURL(ctx context.Context, providedURL url.URL) (*option.Outbound, error) {
 	switch providedURL.Scheme {
+	case "anytls":
+		port, err := strconv.ParseUint(providedURL.Port(), 10, 16)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't parse server port: %w", err)
+		}
+
+		queryParams := providedURL.Query()
+		allowInsecure := queryParams.Get("insecure")
+
+		anytlsOptions := option.AnyTLSOutboundOptions{
+			ServerOptions: option.ServerOptions{
+				Server:     providedURL.Hostname(),
+				ServerPort: uint16(port),
+			},
+			Password: providedURL.User.Username(),
+			OutboundTLSOptionsContainer: option.OutboundTLSOptionsContainer{
+				TLS: &option.OutboundTLSOptions{
+					Enabled:  true,
+					Insecure: allowInsecure == "1" || allowInsecure == "true",
+				},
+			},
+		}
+		if sni := queryParams.Get("sni"); sni != "" {
+			anytlsOptions.OutboundTLSOptionsContainer.TLS.ServerName = sni
+		}
+
+		if alpn := queryParams.Get("alpn"); alpn != "" {
+			anytlsOptions.OutboundTLSOptionsContainer.TLS.ALPN = strings.FieldsFunc(alpn, func(r rune) bool {
+				return r == '\n' || r == '\r' || r == ' ' || r == '\t' || r == ','
+			})
+		}
+
+		if fp := queryParams.Get("fp"); fp != "" {
+			anytlsOptions.OutboundTLSOptionsContainer.TLS.UTLS = &option.OutboundUTLSOptions{
+				Enabled:     true,
+				Fingerprint: fp,
+			}
+		}
+		return &option.Outbound{
+			Type:    constant.TypeAnyTLS,
+			Tag:     providedURL.Fragment,
+			Options: anytlsOptions,
+		}, nil
+
 	case "ss", "shadowsocks":
 		port, err := strconv.ParseUint(providedURL.Port(), 10, 16)
 		if err != nil {
@@ -552,6 +597,41 @@ func parseV2RayTransport(opts model.V2RTransportOpts) *option.V2RayTransportOpti
 
 func outboundFromClash(outbound model.Outbound) (*option.Outbound, error) {
 	switch outbound.Type {
+	case "anytls":
+		anytlsOpts, ok := outbound.Options.(model.AnyTLSOutboundOptions)
+		if !ok {
+			return nil, fmt.Errorf("invalid anytls outobund options type: %T", outbound.Options)
+		}
+		port, err := strconv.ParseUint(anytlsOpts.Port, 10, 16)
+		if err != nil {
+			return nil, fmt.Errorf("couldn't parse server port: %w", err)
+		}
+		return &option.Outbound{
+			Type: constant.TypeAnyTLS,
+			Tag:  outbound.Name,
+			Options: option.AnyTLSOutboundOptions{
+				ServerOptions: option.ServerOptions{
+					Server:     anytlsOpts.Server,
+					ServerPort: uint16(port),
+				},
+				Password:                 anytlsOpts.Password,
+				IdleSessionCheckInterval: badoption.Duration(time.Duration(anytlsOpts.IdleSessionCheckInterval) * time.Second),
+				IdleSessionTimeout:       badoption.Duration(time.Duration(anytlsOpts.IdleSessionTimeout) * time.Second),
+				MinIdleSession:           anytlsOpts.MinIdleSession,
+				OutboundTLSOptionsContainer: option.OutboundTLSOptionsContainer{
+					TLS: &option.OutboundTLSOptions{
+						Enabled:    true,
+						ServerName: anytlsOpts.SNI,
+						Insecure:   anytlsOpts.SkipCertVerify,
+						ALPN:       anytlsOpts.ALPN,
+						UTLS: &option.OutboundUTLSOptions{
+							Enabled:     true,
+							Fingerprint: anytlsOpts.Fingerprint,
+						},
+					},
+				},
+			},
+		}, nil
 	case "shadowsocks":
 		ssOpts, ok := outbound.Options.(model.ShadowsocksOutboundOptions)
 		if !ok {
